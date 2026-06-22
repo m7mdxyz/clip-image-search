@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Image Search Engine</title>
+  <style>
+    :root {
+      --accent: #5b5bd6;
+      --bg: #f6f6f9;
+      --card: #ffffff;
+      --text: #1f1f29;
+      --muted: #767685;
+      --border: #e4e4ec;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 880px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .panel-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.6rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    input[type="file"] { flex: 1; font-size: 0.9rem; }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { opacity: 0.88; }
+
+    .drop-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      padding: 0.9rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 0.7rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .drop-zone.active { border-color: var(--accent); color: var(--accent); }
+
+    #upload-preview {
+      width: 140px;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 10px;
+      display: none;
+      border: 1px solid var(--border);
+      margin-top: 0.7rem;
+    }
+
+    #results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.5rem;
+    }
+
+    .result {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .result:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .result img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .result .score {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.4rem 0.5rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔎 Image Search Engine</h1>
+  <p class="subtitle">Search a small photo collection by text or by image — powered by CLIP embeddings.</p>
+
+  <div class="panel">
+    <div class="panel-label">Search by text</div>
+    <div class="row">
+      <input id="text-query" type="text" placeholder="a fluffy orange cat" />
+      <button id="text-search-btn">Search</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Search by image</div>
+    <div class="row">
+      <input id="image-query" type="file" accept="image/*" />
+      <button id="image-search-btn">Search</button>
+    </div>
+    <div class="drop-zone" id="paste-zone">Click here, then paste an image (Ctrl+V) — or use the file picker above</div>
+    <img id="upload-preview" />
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    const resultsDiv = document.getElementById("results");
+    const uploadPreview = document.getElementById("upload-preview");
+    const fileInput = document.getElementById("image-query");
+    const pasteZone = document.getElementById("paste-zone");
+
+    let pastedBlob = null;
+
+    function showPreview(blob) {
+      uploadPreview.src = URL.createObjectURL(blob);
+      uploadPreview.style.display = "block";
+    }
+
+    function renderResults(results) {
+      resultsDiv.innerHTML = "";
+      for (const { path, score } of results) {
+        const item = document.createElement("div");
+        item.className = "result";
+
+        const img = document.createElement("img");
+        img.src = "/" + path;
+
+        const scoreLabel = document.createElement("div");
+        scoreLabel.className = "score";
+        scoreLabel.textContent = score.toFixed(3);
+
+        item.appendChild(img);
+        item.appendChild(scoreLabel);
+        resultsDiv.appendChild(item);
+      }
+    }
+
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      pastedBlob = null;
+      showPreview(file);
+    };
+
+    pasteZone.tabIndex = 0;
+    pasteZone.addEventListener("focus", () => pasteZone.classList.add("active"));
+    pasteZone.addEventListener("blur", () => pasteZone.classList.remove("active"));
+    pasteZone.addEventListener("paste", (e) => {
+      const item = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"));
+      if (!item) return;
+      const blob = item.getAsFile();
+      pastedBlob = blob;
+      fileInput.value = "";
+      showPreview(blob);
+    });
+
+    document.getElementById("text-search-btn").onclick = async () => {
+      const query = document.getElementById("text-query").value;
+      if (!query.trim()) return;
+      const res = await fetch("/search/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      renderResults(data.results);
+    };
+
+    document.getElementById("image-search-btn").onclick = async () => {
+      const image = pastedBlob || fileInput.files[0];
+      if (!image) return;
+      const formData = new FormData();
+      formData.append("file", image, "upload.png");
+      const res = await fetch("/search/image", { method: "POST", body: formData });
+      const data = await res.json();
+      renderResults(data.results);
+    };
+  </script>
+</body>
+</html>
