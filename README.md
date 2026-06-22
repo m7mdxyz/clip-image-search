@@ -7,6 +7,16 @@ A small image search engine that lets you search a photo collection two ways:
 
 Built to learn how embedding-based search actually works, not as a production app.
 
+## Screenshots
+
+**Search by text**
+
+![Text search](screenshots/text-search.png)
+
+**Search by image**
+
+![Image search](screenshots/image-search.png)
+
 ## How it works
 
 1. **CLIP** (`sentence-transformers`) turns images and text into the same 512-number vector space — visually/semantically similar things end up with similar vectors.
