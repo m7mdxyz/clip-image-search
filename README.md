@@ -13,6 +13,8 @@ Built to learn how embedding-based search actually works, not as a production ap
 
 ![Text search](screenshots/text-search.png)
 
+![Text search](screenshots/ar-text-search.png)
+
 **Search by image**
 
 ![Image search](screenshots/image-search.png)
